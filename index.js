@@ -4,7 +4,10 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: 'https://stage-forum.bell.ca',
+  methods: ['GET']
+}));
 const port = process.env.PORT || 3000;
 
 // Virgin page to scrape
@@ -57,6 +60,7 @@ app.get('/list', async (req, res) => {
       }
     });
 
+    res.set('Access-Control-Allow-Origin', 'https://stage-forum.bell.ca');
     res.json({ products });
 
   } catch (error) {
