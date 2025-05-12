@@ -29,7 +29,7 @@ app.get('/list', async (req, res) => {
 
       const $ = cheerio.load(data);
 
-      $(".item.phone").each((_, el) => {
+      $(".item").each((_, el) => {
         const name = $(el).find(".phoneTitle").text().trim();
         let link = $(el).find("a[href*='phone-details.html']").attr("href");
         if (link && link.startsWith("phone-details.html")) {
