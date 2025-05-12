@@ -1,24 +1,35 @@
-const axios = require("axios");
-const cheerio = require("cheerio");
+const express = require('express');
+const cors = require('cors');
+const axios = require('axios');
+const cheerio = require('cheerio');
 
+const app = express();
+app.use(cors());
+const port = process.env.PORT || 3000;
+
+// Virgin page to scrape
+const targetUrl = "https://www.virginplus.ca/en/phones/phones-summary.html";
 const browserlessUrl = "https://chrome.browserless.io/content";
-const token = "2SIb60dwXdzNQlG048bfbbda2d58baa30d618d5bbde0b3e59";
-const url = "https://www.virginplus.ca/en/phones/phones-summary.html";
+const token = "2SIb60dwXdzNQlG048bfbbda2d58baa30d618d5bbde0b3e59"; // 🔑 Use your Browserless API token
 
-(async () => {
+// Root route
+app.get('/', (req, res) => {
+  res.send('Virgin Product Scraper is running!');
+});
+
+// Scraper API route
+app.get('/list', async (req, res) => {
   try {
-    const response = await axios.post(
+    const { data: html } = await axios.post(
       browserlessUrl,
-      { url },
+      { url: targetUrl },
       {
         headers: { "Cache-Control": "no-cache" },
         params: { token }
       }
     );
 
-    const html = response.data;
     const $ = cheerio.load(html);
-
     const products = [];
 
     $(".item.phone").each((_, el) => {
@@ -29,30 +40,31 @@ const url = "https://www.virginplus.ca/en/phones/phones-summary.html";
         link = `https://www.virginplus.ca/en/phones/${link}`;
       }
 
-      const img =
+      const rawImg =
         $(el).find("img.phonepic").attr("src") ||
         $(el).find("img.phonepic").attr("data-ng-src") ||
-        $(el).find("img.phonepic").attr("data-src") ||
-        null;
+        $(el).find("img.phonepic").attr("data-src");
 
-      const imageUrl = img?.startsWith("/") ? `https://www.virginplus.ca${img}` : img;
+      const img = rawImg?.startsWith("/") ? `https://www.virginplus.ca${rawImg}` : rawImg;
 
-      products.push({
-        category: url,
-        name,
-        link,
-        img: imageUrl
-      });
+      if (name && link && img) {
+        products.push({
+          category: targetUrl,
+          name,
+          link,
+          img
+        });
+      }
     });
 
-    // ✅ Output JSON in format like your screenshot
-    console.log(JSON.stringify({ products }, null, 2));
+    res.json({ products });
 
-  } catch (err) {
-    console.error("Browserless scrape failed:", err.message);
-    if (err.response) {
-      console.error("Response data:", err.response.data);
-      console.error("Response status:", err.response.status);
-    }
+  } catch (error) {
+    console.error("Scraping failed:", error.message);
+    res.status(500).json({ error: "Failed to scrape Virgin products" });
   }
-})();
+});
+
+app.listen(port, () => {
+  console.log(`✅ Server running at http://localhost:${port}`);
+});
