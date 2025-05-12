@@ -1,60 +1,58 @@
-const cors = require('cors');
-const express = require('express');
-const axios = require('axios');
-const cheerio = require('cheerio');
+const axios = require("axios");
+const cheerio = require("cheerio");
 
-const app = express();
-app.use(cors());
-const port = process.env.PORT || 3000;
+const browserlessUrl = "https://chrome.browserless.io/content";
+const token = "2SIb60dwXdzNQlG048bfbbda2d58baa30d618d5bbde0b3e59";
+const url = "https://www.virginplus.ca/en/phones/phones-summary.html";
 
-app.get('/', (req, res) => {
-  res.send('Web Data Scraper!');
-});
+(async () => {
+  try {
+    const response = await axios.post(
+      browserlessUrl,
+      { url },
+      {
+        headers: { "Cache-Control": "no-cache" },
+        params: { token }
+      }
+    );
 
-const urls = [
-  "https://www.virginplus.ca/en/phones/phones-summary.html",
-];
+    const html = response.data;
+    const $ = cheerio.load(html);
 
-app.get('/list', async (req, res) => {
-  const allProducts = [];
+    const products = [];
 
-  for (const url of urls) {
-    try {
-      const { data } = await axios.get(url, {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36",
-        },
+    $(".item.phone").each((_, el) => {
+      const name = $(el).find(".phoneTitle").text().trim();
+
+      let link = $(el).find("a[href*='phone-details.html']").attr("href");
+      if (link && link.startsWith("phone-details.html")) {
+        link = `https://www.virginplus.ca/en/phones/${link}`;
+      }
+
+      const img =
+        $(el).find("img.phonepic").attr("src") ||
+        $(el).find("img.phonepic").attr("data-ng-src") ||
+        $(el).find("img.phonepic").attr("data-src") ||
+        null;
+
+      const imageUrl = img?.startsWith("/") ? `https://www.virginplus.ca${img}` : img;
+
+      products.push({
+        category: url,
+        name,
+        link,
+        img: imageUrl
       });
+    });
 
-      const $ = cheerio.load(data);
+    // ✅ Output JSON in format like your screenshot
+    console.log(JSON.stringify({ products }, null, 2));
 
-      $(".item").each((_, el) => {
-        const name = $(el).find(".phoneTitle").text().trim();
-        let link = $(el).find("a[href*='phone-details.html']").attr("href");
-        if (link && link.startsWith("phone-details.html")) {
-          link = `https://www.virginplus.ca/en/phones/${link}`;
-        }
-        const img = $(el).find(".phonepic").attr("data-src") ||
-                    $(el).find(".phonepic").attr("data-ng-src")||
-                    $(el).find(".phonepic").attr("src");
-
-        allProducts.push({
-          category: url,
-          name,
-          link: link,
-          img
-        });
-      });
-
-    } catch (error) {
-      console.error(`Scraping failed for ${url}:`, error.message);
+  } catch (err) {
+    console.error("Browserless scrape failed:", err.message);
+    if (err.response) {
+      console.error("Response data:", err.response.data);
+      console.error("Response status:", err.response.status);
     }
   }
-
-  res.json({ products: allProducts });
-});
-
-app.listen(port, () => {
-  console.log(`Server is running at http://localhost:${port}`);
-});
+})();
