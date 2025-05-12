@@ -15,7 +15,7 @@ const urls = [
   "https://www.virginplus.ca/en/phones/phones-summary.html",
 ];
 
-app.get('/products', async (req, res) => {
+app.get('/list', async (req, res) => {
   const allProducts = [];
 
   for (const url of urls) {
@@ -31,7 +31,10 @@ app.get('/products', async (req, res) => {
 
       $(".item.phone").each((_, el) => {
         const name = $(el).find(".phoneTitle").text().trim();
-        const link = $(el).find("a.card-link-js").attr("href");
+        let link = $(el).find("a[href*='phone-details.html']").attr("href");
+        if (link && link.startsWith("phone-details.html")) {
+          link = `https://www.virginplus.ca/en/phones/${link}`;
+        }
         const img = $(el).find(".phonepic").attr("data-src") ||
                     $(el).find(".phonepic").attr("data-ng-src")||
                     $(el).find(".phonepic").attr("src");
@@ -39,7 +42,7 @@ app.get('/products', async (req, res) => {
         allProducts.push({
           category: url,
           name,
-          link: link ? `https://www.bell.ca${link}` : null,
+          link: link,
           img
         });
       });
