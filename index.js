@@ -50,12 +50,15 @@ app.get('/list', async (req, res) => {
 
       const img = rawImg?.startsWith("/") ? `https://www.virginplus.ca${rawImg}` : rawImg;
 
+      const desc = $(el).find(".priceSubInfo").text().trim();
+
       if (name && link && img) {
         products.push({
           category: targetUrl,
           name,
           link,
-          img
+          img,
+          desc
         });
       }
     });
